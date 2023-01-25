@@ -15,8 +15,3 @@ resource "aws_instance" "ubuntu" {
  
 }
 
-provider "aws" {
-  region = "us-east-1"
-  access_key = "AKIA2E76B54NNYXLIEEC"
-  secret_key = "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"
-}
