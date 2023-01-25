@@ -13,4 +13,9 @@ resource "aws_instance" "ubuntu" {
          "name" = "HelloTerraform"
     }
  
+
 }
+=======
+
+
+
