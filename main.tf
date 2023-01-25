@@ -1,3 +1,4 @@
+
 provider "aws" {
   region = "us-east-1"
   access_key = "AKIA2E76B54NNYXLIEEC"
@@ -15,7 +16,6 @@ resource "aws_instance" "ubuntu" {
  
 
 }
-=======
 
 
 
