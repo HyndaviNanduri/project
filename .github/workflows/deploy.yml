@@ -54,6 +54,7 @@ jobs:
           usernmae: ec2-user
           key: ${{secrets.PRIVATE_KEY}}
           host: ${{secrets.PUBLIC_KEY}}
+      - name: pulling
         run: |
           docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker images
