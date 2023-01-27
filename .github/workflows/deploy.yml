@@ -49,13 +49,9 @@ jobs:
           terraform init
           terraform apply -auto-approve
       - name: pull docker image
-        uses: appleboy/ssh-action@master
-        with:
-          usernmae: ec2-user
-          key: ${{secrets.PRIVATE_KEY}}
-          host: ${{secrets.PUBLIC_KEY}}
-      - name: pulling
+
         run: |
           docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker images
+          docker run $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker ps -q -a
 
