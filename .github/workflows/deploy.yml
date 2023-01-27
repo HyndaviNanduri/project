@@ -51,7 +51,7 @@ jobs:
       - name: pull docker image
 
         run: |
-          docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker run $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker pull 697928118042.dkr.ecr.us-east-1.amazonaws.com/terraform
+          docker run 697928118042.dkr.ecr.us-east-1.amazonaws.com/terraform
           docker ps -q -a
 
