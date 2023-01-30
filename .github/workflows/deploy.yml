@@ -45,7 +45,15 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-  
+      - name: install-aws-cli
+        uses: unfor19/install-aws-cli-action@master
+      - run: aws --version
+        shell: bash
+      - name: setup terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+         version: v1.3.7
+         run: |
           terraform init
           terraform apply -auto-approve
       - name: pull  image to ec2
@@ -56,6 +64,7 @@ jobs:
          key: ${{ secrets.PRIVATE_KEY }}
          run:
            sudo docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+           sudo docker ps
            
 
        
