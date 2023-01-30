@@ -60,7 +60,7 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
          host: ${{ secrets.PUBLIC_KEY }}
-         username: ec2-user
+         username: ubuntu
          key: ${{ secrets.PRIVATE_KEY }}
          run:
            sudo docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
