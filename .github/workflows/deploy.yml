@@ -48,10 +48,15 @@ jobs:
   
           terraform init
           terraform apply -auto-approve
-      - name: pull docker image
+      - name: pull  image to ec2
+        uses: appleboy/ssh-action@master
+        with:
+         host: ${{ secrets.PUBLIC_KEY }}
+         username: ec2-user
+         key: ${{ secrets.PRIVATE_KEY }}
+         run:
+           sudo docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+           
 
-        run: |
-          docker pull 697928118042.dkr.ecr.us-east-1.amazonaws.com/terraform
-          docker run 697928118042.dkr.ecr.us-east-1.amazonaws.com/terraform
-          docker ps -q -a
+       
 
