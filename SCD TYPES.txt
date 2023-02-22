@@ -1,0 +1,325 @@
+Azure supports four types of storages blob(binary large objects) storage,file storage,table storage,queue storage.
+
+
+
+
+mysql> create table employee(emp_id int not null, name varchar(25) not null, dept varchar(25),salary int,loc varchar(255),prev_loc varchar(255) null);
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> CREATE TABLE dim_employee (
+    ->   surrogate_key INT NULL,
+    ->   emp_id INT NOT NULL,
+    ->   name VARCHAR(25) NOT NULL,
+    ->   dept VARCHAR(25),
+    ->   salary INT,
+    ->   loc VARCHAR(25),
+    ->   prev_loc VARCHAR(25) NULL,
+    ->   start_date DATETIME,
+    ->   end_date DATETIME,
+    ->   is_current CHAR
+    -> );
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> CREATE TRIGGER trig1
+    -> AFTER INSERT ON employee
+    -> FOR EACH ROW
+    -> INSERT INTO dim_employee(emp_id,name,dept,salary,loc,start_date,end_date,is_current )
+    -> VALUES(NEW.emp_id,NEW.name,NEW.dept,NEW.salary,NEW.loc,NOW(),NULL,'Y');
+Query OK, 0 rows affected (0.01 sec)
+mysql> DELIMITER $$
+
+mysql> CREATE TRIGGER reset_surrogate_key
+    -> BEFORE INSERT ON dim_employee
+    -> FOR EACH ROW
+    -> BEGIN
+    ->   DECLARE max_surrogate_key INT;
+    ->   DECLARE max_emp_id INT;
+    ->   SELECT MAX(surrogate_key), MAX(emp_id) INTO max_surrogate_key, max_emp_id FROM dim_employee WHERE emp_id = NEW.emp_id;
+    ->   IF max_emp_id IS NULL THEN
+    ->     SET max_emp_id = 0;
+    ->   END IF;
+    ->   IF max_surrogate_key IS NULL THEN
+    ->     SET max_surrogate_key = 0;
+    ->   END IF;
+    ->   IF max_emp_id = NEW.emp_id THEN
+    ->     SET NEW.surrogate_key = max_surrogate_key + 1;
+    ->   ELSE
+    ->     SET NEW.surrogate_key = 1;
+    ->   END IF;
+    -> END$$
+Query OK, 0 rows affected (0.07 sec)
+mysql> DELIMITER ;
+
+mysql> DELIMITER $$
+mysql> CREATE TRIGGER scd1
+    -> AFTER UPDATE ON employee
+    -> FOR EACH ROW
+    -> BEGIN
+    ->   IF OLD.name != NEW.name THEN
+    ->     UPDATE dim_employee SET name = NEW.name WHERE emp_id = OLD.emp_id;
+    ->   END IF;
+    -> END $$
+Query OK, 0 rows affected (0.02 sec)
+mysql> DELIMITER ;
+
+mysql> DELIMITER $$
+mysql> CREATE TRIGGER update_salary
+    -> AFTER update ON employee
+    -> FOR EACH ROW
+    -> BEGIN
+    ->   if new.salary != old.salary then
+    ->     INSERT INTO dim_employee (emp_id,name,dep,salary,loc,start_date, end_date,is_current)
+    ->     VALUES (new.emp_id,new.name,new.dept,new.salary,new.loc,now(),null,"Y" );
+    ->   end if;
+    -> END $$
+Query OK, 0 rows affected (0.23 sec)
+mysql> DELIMITER ;
+
+mysql> DELIMITER $$
+mysql> CREATE TRIGGER trig2
+    -> AFTER update ON employee
+    -> FOR EACH ROW
+    -> BEGIN
+    -> if new.salary != old.salary then
+    ->   UPDATE dim_employee
+    ->   SET end_date = start_date-1, is_current= 'N'
+    ->   WHERE emp_id = OLD.emp_id AND  new.salary != old.salary AND is_current="Y";
+    -> end if;
+    -> END $$
+Query OK, 0 rows affected (0.02 sec)
+mysql> DELIMITER ;
+
+mysql> DELIMITER $$
+mysql> CREATE TRIGGER trig3
+    -> AFTER UPDATE ON employee
+    -> FOR EACH ROW
+    -> BEGIN
+    -> IF OLD.loc!=NEW.loc THEN
+    -> UPDATE dim_employee SET loc=new.loc,prev_loc=old.loc WHERE emp_id=NEW.emp_id;
+    -> END IF;
+    -> END $$
+Query OK, 0 rows affected (0.02 sec)
+mysql> DELIMITER ;
+
+mysql> DELIMITER $$
+mysql> CREATE TRIGGER trig4
+    -> BEFORE INSERT ON dim_employee
+    -> FOR EACH ROW
+    -> BEGIN
+    ->   DECLARE pre varchar(20);
+    ->   DECLARE max_emp_id INT;
+    ->   SELECT  prev_loc,MAX(emp_id) INTO pre,max_emp_id FROM dim_employee WHERE emp_id = NEW.emp_id;
+    ->   IF max_emp_id = NEW.emp_id THEN
+    ->   SET NEW.prev_loc = pre;
+    ->   END IF;
+    -> END$$
+Query OK, 0 rows affected (0.02 sec)
+mysql> DELIMITER ;
+
+********************************inserting values into employee table********************************
+mysql> insert into employee(emp_id,name,dept,salary,loc) values(101,"Hyndavi","A",50000,"HYD");
+Query OK, 1 row affected (0.03 sec)
+
+mysql> select * from employee;
++--------+---------+------+--------+------+----------+
+| emp_id | name    | dept | salary | loc  | prev_loc |
++--------+---------+------+--------+------+----------+
+|    101 | Hyndavi | A    |  50000 | HYD  | NULL     |
++--------+---------+------+--------+------+----------+
+1 row in set (0.00 sec)
+
+mysql> select * from dim_employee;
++---------------+--------+---------+------+--------+------+----------+---------------------+----------+------------+
+| surrogate_key | emp_id | name    | dept | salary | loc  | prev_loc | start_date          | end_date | is_current |
++---------------+--------+---------+------+--------+------+----------+---------------------+----------+------------+
+|             1 |    101 | Hyndavi | A    |  50000 | HYD  | NULL     | 2023-02-22 11:55:28 | NULL     | Y          |
++---------------+--------+---------+------+--------+------+----------+---------------------+----------+------------+
+1 row in set (0.00 sec)
+
+mysql> insert into employee(emp_id,name,dept,salary,loc) values(102,"Anjali","B",40000,"VSKP");
+Query OK, 1 row affected (0.01 sec)
+
+mysql> select * from employee;
++--------+---------+------+--------+------+----------+
+| emp_id | name    | dept | salary | loc  | prev_loc |
++--------+---------+------+--------+------+----------+
+|    101 | Hyndavi | A    |  50000 | HYD  | NULL     |
+|    102 | Anjali  | B    |  40000 | VSKP | NULL     |
++--------+---------+------+--------+------+----------+
+2 rows in set (0.00 sec)
+
+mysql> select * from dim_employee;
++---------------+--------+---------+------+--------+------+----------+---------------------+----------+------------+
+| surrogate_key | emp_id | name    | dept | salary | loc  | prev_loc | start_date          | end_date | is_current |
++---------------+--------+---------+------+--------+------+----------+---------------------+----------+------------+
+|             1 |    101 | Hyndavi | A    |  50000 | HYD  | NULL     | 2023-02-22 11:55:28 | NULL     | Y          |
+|             1 |    102 | Anjali  | B    |  40000 | VSKP | NULL     | 2023-02-22 11:57:42 | NULL     | Y          |
++---------------+--------+---------+------+--------+------+----------+---------------------+----------+------------+
+2 rows in set (0.00 sec)
+
+*****************************************************SCD-TYPE:1*******************************************
+
+mysql> update employee set name = "Hyndavi Nanduri" where emp_id=101;
+Query OK, 1 row affected (0.01 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> select * from employee;
++--------+-----------------+------+--------+------+----------+
+| emp_id | name            | dept | salary | loc  | prev_loc |
++--------+-----------------+------+--------+------+----------+
+|    101 | Hyndavi Nanduri | A    |  50000 | HYD  | NULL     |
+|    102 | Anjali          | B    |  40000 | VSKP | NULL     |
++--------+-----------------+------+--------+------+----------+
+2 rows in set (0.00 sec)
+
+mysql>  select * from dim_employee;
++---------------+--------+-----------------+------+--------+------+----------+---------------------+----------+------------+
+| surrogate_key | emp_id | name            | dept | salary | loc  | prev_loc | start_date          | end_date | is_current |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+----------+------------+
+|             1 |    101 | Hyndavi Nanduri | A    |  50000 | HYD  | NULL     | 2023-02-22 11:55:28 | NULL     | Y          |
+|             1 |    102 | Anjali          | B    |  40000 | VSKP | NULL     | 2023-02-22 11:57:42 | NULL     | Y          |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+----------+------------+
+2 rows in set (0.00 sec)
+
+*******************************************SCD-TYPE:2**********************************************
+
+mysql> DELIMITER $$
+mysql> CREATE TRIGGER update_salary
+    ->  AFTER update ON employee
+    ->  FOR EACH ROW
+    ->  BEGIN
+    -> if new.salary != old.salary then
+    ->  INSERT INTO dim_employee (emp_id,name,dept,salary,loc,start_date, end_date,is_current)
+    ->  VALUES (new.emp_id,new.name,new.dept,new.salary,new.loc,now(),null,"Y" );
+    ->  end if;
+    ->  END $$
+Query OK, 0 rows affected (0.24 sec)
+
+mysql>  DELIMITER ;
+mysql> update employee set salary=60000 where emp_id=101;
+Query OK, 1 row affected (0.01 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> select * from dim_employee;
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+| surrogate_key | emp_id | name            | dept | salary | loc  | prev_loc | start_date          | end_date            | is_current |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+|             1 |    101 | Hyndavi Nanduri | A    |  50000 | HYD  | NULL     | 2023-02-22 11:55:28 | 2023-02-22 11:55:27 | N          |
+|             1 |    102 | Anjali          | B    |  40000 | VSKP | NULL     | 2023-02-22 11:57:42 | NULL                | Y          |
+|             2 |    101 | Hyndavi Nanduri | A    |  60000 | HYD  | NULL     | 2023-02-22 12:10:12 | NULL                | Y          |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+3 rows in set (0.00 sec)
+
+
+***************************************************SCD-TYPE:3*********************************************
+
+mysql> update employee set loc="BAN" where emp_id=101;
+Query OK, 1 row affected (0.02 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> select * from dim_employee;
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+| surrogate_key | emp_id | name            | dept | salary | loc  | prev_loc | start_date          | end_date            | is_current |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+|             1 |    101 | Hyndavi Nanduri | A    |  50000 | BAN  | HYD      | 2023-02-22 11:55:28 | 2023-02-22 11:55:27 | N          |
+|             1 |    102 | Anjali          | B    |  40000 | VSKP | NULL     | 2023-02-22 11:57:42 | NULL                | Y          |
+|             2 |    101 | Hyndavi Nanduri | A    |  60000 | BAN  | HYD      | 2023-02-22 12:10:12 | NULL                | Y          |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+3 rows in set (0.00 sec)
+
+********************************************IMPLEMENTED TYPE3 FOR SECOND RECORD***********************************
+mysql> update employee set loc='HYD' where emp_id=102;
+Query OK, 1 row affected (0.23 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> select * from dim_employee;
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+| surrogate_key | emp_id | name            | dept | salary | loc  | prev_loc | start_date          | end_date            | is_current |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+|             1 |    101 | Hyndavi Nanduri | A    |  50000 | BAN  | HYD      | 2023-02-22 11:55:28 | 2023-02-22 11:55:27 | N          |
+|             1 |    102 | Anjali          | B    |  40000 | HYD  | VSKP     | 2023-02-22 11:57:42 | NULL                | Y          |
+|             2 |    101 | Hyndavi Nanduri | A    |  60000 | BAN  | HYD      | 2023-02-22 12:10:12 | NULL                | Y          |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+3 rows in set (0.00 sec)
+
+*****************************************IMPLEMENTED TYPE2 FOR SECOND RECORD***********************************
+mysql> update employee set salary=70000 where emp_id=102;
+Query OK, 1 row affected (0.01 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> select * from dim_employee;
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+| surrogate_key | emp_id | name            | dept | salary | loc  | prev_loc | start_date          | end_date            | is_current |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+|             1 |    101 | Hyndavi Nanduri | A    |  50000 | BAN  | HYD      | 2023-02-22 11:55:28 | 2023-02-22 11:55:27 | N          |
+|             1 |    102 | Anjali          | B    |  40000 | HYD  | VSKP     | 2023-02-22 11:57:42 | 2023-02-22 11:57:41 | N          |
+|             2 |    101 | Hyndavi Nanduri | A    |  60000 | BAN  | HYD      | 2023-02-22 12:10:12 | NULL                | Y          |
+|             2 |    102 | Anjali          | B    |  70000 | HYD  | VSKP     | 2023-02-22 12:48:34 | NULL                | Y          |
++---------------+--------+-----------------+------+--------+------+----------+---------------------+---------------------+------------+
+4 rows in set (0.00 sec)
+
+mysql>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
